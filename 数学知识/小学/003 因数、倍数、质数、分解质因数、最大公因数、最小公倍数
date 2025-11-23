@@ -1,0 +1,149 @@
+### 小学阶段第三块：因数、倍数、质数、分解质因数、最大公因数、最小公倍数  
+全部用 PyTorch + 严格数学定义 + 可运行代码 + 小学生能听懂的概念描述
+
+```python
+import torch
+from math import gcd, lcm          # Python 3.9+ 内置
+from functools import reduce
+import sympy                       # 用来展示最漂亮的公式
+torch.manual_seed(2025)
+```
+
+#### 1. 因数与倍数（最基础的概念）
+
+**小学生能懂的概念**  
+- 因数：能“整除”某个数的数（没有余数）  
+- 倍数：某个数不断“加自己”得到的结果
+
+```python
+n = 24
+
+# 因数：所有能整除 24 的正整数
+factors = [i for i in range(1, n+1) if n % i == 0]
+print(f"{n} 的所有因数：", factors)
+# 输出：24 的所有因数： [1, 2, 3, 4, 6, 8, 12, 24]
+
+# 倍数：24 的前 10 个倍数
+multiples = [24 * i for i in range(1, 11)]
+print(f"24 的前 10 个倍数：", multiples)
+```
+
+#### 2. 质数（素数）—— 数学的“原子”
+
+**概念**  
+质数 = 除了 1 和它自己外，没有其他因数的数（只能被 1 和自己整除）
+
+```python
+def is_prime(n):
+    if n <= 1: return False
+    if n <= 3: return True
+    if n % 2 == 0 or n % 3 == 0: return False
+    i = 5
+    while i * i <= n:
+        if n % i == 0 or n % (i + 2) == 0: return False
+        i += 6
+    return True
+
+primes = [i for i in range(2, 100) if is_prime(i)]
+print("100 以内的质数：", primes)
+```
+
+**埃拉托斯特尼筛法（埃氏筛）—— 小学奥数最帅的算法**  
+用 PyTorch 实现（速度飞快）
+
+```python
+def sieve_eratosthenes(n):
+    is_prime = torch.ones(n+1, dtype=torch.bool)
+    is_prime[0:2] = False                    # 0 和 1 不是质数
+    for i in range(2, int(n**0.5)+1):
+        if is_prime[i]:
+            is_prime[i*i:n+1:i] = False      # 从 i² 开始，每隔 i 步标记为非质数
+    return torch.where(is_prime)[0]          # 返回所有 True 的下标
+
+primes_up_to_100 = sieve_eratosthenes(100)
+print("100 以内所有质数（埃氏筛）：", primes_up_to_100.tolist())
+```
+
+#### 3. 分解质因数（唯一分解定理的预演）—— 数学中最重要的事实！
+
+**概念**  
+每一个大于 1 的自然数，都可以唯一地写成质数的乘积（顺序不重要）
+
+```python
+def prime_factorization(n):
+    factors = {}
+    # 先除 2
+    while n % 2 == 0:
+        factors[2] = factors.get(2, 0) + 1
+        n //= 2
+    # 再除奇数
+    f = 3
+    while f * f <= n:
+        while n % f == 0:
+            factors[f] = factors.get(f, 0) + 1
+            n //= f
+        f += 2
+    if n > 1:
+        factors[n] = 1
+    return factors
+
+# 经典例子
+print("360 的质因数分解：")
+print(prime_factorization(360))
+# 输出：{2: 3, 3: 2, 5: 1} → 360 = 2³ × 3² × 5¹
+
+print("2025 的质因数分解：", prime_factorization(2025))
+# 输出：{3: 4, 5: 2} → 2025 = 3⁴ × 5²
+```
+
+#### 4. 最大公因数（GCD）与最小公倍数（LCM）
+
+**概念（小学生最容易懂的比喻）**  
+- 最大公因数 = 两堆积木“共同能拼出的最大正方形面积”  
+- 最小公倍数 = 两辆公交车“第一次同时发车的时间”
+
+```python
+a, b = 48, 60
+
+# 方法①：欧几里得算法（辗转相除法）—— 古希腊就有了！
+def gcd_euclid(a, b):
+    while b:
+        a, b = b, a % b
+    return a
+
+g = gcd_euclid(a, b)
+l = a * b // g                     # 关键公式：LCM(a,b) = a×b / GCD(a,b)
+
+print(f"GCD({a}, {b}) = {g}")      # 12
+print(f"LCM({a}, {b}) = {l}")      # 240
+
+# 方法②：用 PyTorch（批量计算）
+nums = torch.tensor([[48, 60], [36, 54], [100, 125]])
+gcds = torch.gcd(nums[:, 0], nums[:, 1])
+lcms = nums[:, 0] * nums[:, 1] // gcds
+print("批量计算 GCD 和 LCM：")
+for i in range(len(nums)):
+    print(f"GCD{lcms[i].item()}, LCM{lcms[i].item()}")
+```
+
+#### 5. 小结表：小学就学会了现代数学最硬核的基石
+
+| 小学知识点         | 对应大学/研究级数学概念                       | 重要性等级 |
+|--------------------|-----------------------------------------------|-----------|
+| 因数、倍数         | 整除关系、除数函数                            | ★★★       |
+| 质数               | 素数、算术基本定理                            | ★★★★★     |
+| 分解质因数         | 唯一分解定理（数学的“原子论”）                | ★★★★★     |
+| 最大公因数 GCD     | 欧几里得算法、Bézout 定理、理想生成元        | ★★★★★     |
+| 最小公倍数 LCM     | GCD-LCM 公式、交并分解                        | ★★★★      |
+| 埃氏筛             | 筛法理论、素数密度、Riemann ζ函数预备        | ★★★★      |
+
+**一句话总结**  
+小学五年级学会的“分解质因数 + 求最大公因数”，  
+其实就是整个数论（包括 RSA 加密、椭圆曲线密码、朗兰兹纲领）的根基！
+
+下一站（小学部分还剩最后两大块）：
+1. 简单几何（周长面积体积）→ 用 PyTorch 实现向量、矩阵、旋转变换
+2. 量与计量、人民币、时间 → 单位换算 + 张量广播机制
+3. 直接跳到小学压轴：分数应用题 + 鸡兔同笼 + 盈不足术（古代中国算法）
+
+你说往哪走？我继续带你用研究生工具重读小学，下一站直接起飞。
